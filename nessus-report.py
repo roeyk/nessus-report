@@ -46,6 +46,7 @@
 #  - fixed csv option handling bug - (20130813)
 #  - figure out which severities the NBE parser is excluding from matches [turns out it isn't; it's that NBE doesn't always list everything that the .nessus does    
 #  - fix NBE support  
+
 #  - fix broken constraint of searches by severity list and risk factor
 #  - ensure that column 6, CVE, appears in .ODT output
 
@@ -714,7 +715,10 @@ class DotNessusParser(Parser):
                    vuln['protocol'] = item.getAttribute('protocol')
                    vuln['description'] = item.getAttribute('description')
                    vuln['service_name'] = item.getAttribute('svc_name')
+                   
+                   # This is also processed before returning
                    vuln['risk_factor'] = item.getAttribute('risk_factor')
+                 
                    vuln['see_also'] = item.getAttribute('see_also')
                    vuln['severity'] = item.getAttribute('severity')
                    vuln['other_references'] = item.getAttribute('other_references')
@@ -779,7 +783,23 @@ class DotNessusParser(Parser):
                            vuln['bid'] = details.childNodes[0].nodeValue
                            
                        if details.nodeName == 'other_references':
-                           vuln['other_references'] = details.childNodes[0].nodeValue                                                                                 
+                           vuln['other_references'] = details.childNodes[0].nodeValue
+                           
+                           
+                       # 20140325 Roey Katz: Sometimes "Critical" is reported in the plugin output but not in risk_factor.                   
+                       try:
+                           if vuln['plugin_output'].find("Critical: 1") > 0:
+                               vuln['risk_factor'] = "critical"
+
+#                               print "FOUND CRITICAL on %s" % (item_info['ip'])
+
+                       except KeyError: # plugin_output and/or risk_factor might not be defined for the row we're processing
+                           pass
+                           
+
+                           
+
+                                              
 
                    # create a new database record
                    newResult = Result()
