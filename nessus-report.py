@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # Nessus-Report:  Script to parse and tabulate Nessus findings.
 # (c) 2012- Roey Katz, SeNet International.  
