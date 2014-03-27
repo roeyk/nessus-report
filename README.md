@@ -17,7 +17,7 @@ For more information, please see https://code.google.com/p/yet-another-nessus-pa
 
 Current issues as of (20130813):
 
-  - ensure that 'critical' user input parameter is honored
+
   - add Compliance Finding results (for both .nessus and NBE)
   - fix CSV output
   - get header row to repeat across all pages of the table
@@ -26,6 +26,7 @@ Current issues as of (20130813):
   - optimize for .nessus file loading speed.
 
 Issues resolved:
+  - ensure that 'critical' user input parameter is honored (20140325)
   - fixed csv option handling bug - (20130813)
   - figure out which severities the NBE parser is excluding from matches [turns out it isn't; it's that NBE doesn't always list everything that the .nessus does    
   - fix NBE support  
