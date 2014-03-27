@@ -336,7 +336,7 @@ class ODFTable:
         # ---- Populate Column 4: Implication ----
         descString = ''.join(result.getDescription().replace('\\n', '\n')) # + pluginOutput.replace('\\n', '\n'))
         addElem(tc4, descString.strip() )
-        tc4.addElement( ODFParagraph(stylename=self.BoldStyle, text="\n\n   SEVERITY:  ".encode(ODFTable.PWENC)))
+        tc4.addElement( ODFParagraph(stylename=self.BoldStyle, text="\n\n   RISK RATING:  ".encode(ODFTable.PWENC)))
         tc4.addElement( ODFParagraph(stylename=self.riskFactorsDict[riskFactor], text=riskFactor.encode(ODFTable.PWENC)))
         tr.addElement(tc4)
         
