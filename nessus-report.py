@@ -391,7 +391,7 @@ class Result:
     def getSeverity(self):    return self.vuln['severity']
     
     def getSeverityAsWord(self):
-        return {'4':'Hole4','0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]
+        return {'4':'CRITICAL Security Hole','0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]
     
     def getPort(self): return self.vuln['port']
     def getProtocol(self): return self.vuln['protocol']
@@ -424,8 +424,7 @@ class NBENessusParser(Parser):
 #        lines = [l.decode("utf-8") for l in open(fname).readlines()]
         lines  =  open(fname).readlines()
 
-#        severities = []
-      
+
         # iterate over lines of the NBE input file
         for l in lines:
             
@@ -505,14 +504,15 @@ class NBENessusParser(Parser):
             vuln['plugin_id'] = pluginID
             
             
-            # Normalzie Severity rating:  .NBE files use words, where .Nessus files use numbers; here we normalize this to a number.
-#           return {'0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]            
-            sevdict = {'Note':'0',
-                            'Security Hole4':'4',
+            # Normalize Severity rating:  .NBE files use words, where .Nessus files use numbers; here we normalize this to a number.
+
+            sevdict = {
+#                            'Security Hole4':'4',   # <----- FIXME:  find what plugins that say "4" for Severity in .nessus file say in .NBE files and change the key accordingly
                             'Security Hole':'3',
                             'Security Warning':'2',
                             'Security Note':'1',
-                            'Info':'0'
+                            'Info':'0',
+                            'Note':'0'
                             }
                             
             vuln['severity'] = sevdict[severity]
@@ -561,7 +561,7 @@ class NBENessusParser(Parser):
 
             self.results.addResult(newResult)
             
-#        print 'severities are %s' % set(severities)
+
             
         
     # parse nessus plugin output results
@@ -978,8 +978,8 @@ def parseArgs( argv ):
               help="specify list of allowable risk factors (default is any of critical,high,moderate,medium,low,none")
     parser.add_option("-t", "--hostlist", type="string",  action="store", dest="hostList",
               help="specify specific hosts to show")
-    parser.add_option("-s", "--severities", type="string", action="store", dest="severityList", default="hole4,hole,warn,note,info,openport",
-              help="specify specific list of severity codes to show (default is any of hole4,hole,warn,note,info,openport")
+    parser.add_option("-s", "--severities", type="string", action="store", dest="severityList", default="critical_hole,hole,warn,note,info,openport",
+              help="specify specific list of severity codes to show (default is any of critical_hole,hole,warn,note,info,openport")
     parser.add_option("-q", "--query", type="string", action="store", dest="contentQuery",
               help="show all results whose synopses match this regular expression")
     parser.add_option("-i", "--idlist", type="string", action="store", dest="pluginIDList",
@@ -1091,7 +1091,7 @@ if __name__=='__main__':
     if options.severityList:
 
       # added "hole4" to account for the fact that some plugins have a "4" as their Severity.
-      translateSeverities = {"hole4":"4", "hole":"3","warn":"2","note":"1","info":"0","openport":"0"}  # translate user input into numbers that Nessus now uses
+      translateSeverities = {"critical_hole":"4", "hole":"3","warn":"2","note":"1","info":"0","openport":"0"}  # translate user input into numbers that Nessus now uses
       
       try:
          options.severityList = [translateSeverities[i] for i in options.severityList.split(',')]
