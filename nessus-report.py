@@ -391,7 +391,7 @@ class Result:
     def getSeverity(self):    return self.vuln['severity']
     
     def getSeverityAsWord(self):
-        return {'0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]
+        return {'4':'Hole4','0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]
     
     def getPort(self): return self.vuln['port']
     def getProtocol(self): return self.vuln['protocol']
@@ -423,7 +423,8 @@ class NBENessusParser(Parser):
     def loadFile( self, fname ):
 #        lines = [l.decode("utf-8") for l in open(fname).readlines()]
         lines  =  open(fname).readlines()
-        severities = []
+
+#        severities = []
       
         # iterate over lines of the NBE input file
         for l in lines:
@@ -464,9 +465,11 @@ class NBENessusParser(Parser):
             else: 
                 print 'corner case detected: %s' % l
                 print('len(groups) = %d' % len(groups))
+                raise Exception("weird line, please alert developer")
+            
 
             # debug
-            severities.append(severity)
+#            severities.append(severity)
 
             # holder for host information
             item_info = {
@@ -505,11 +508,13 @@ class NBENessusParser(Parser):
             # Normalzie Severity rating:  .NBE files use words, where .Nessus files use numbers; here we normalize this to a number.
 #           return {'0':"Open port",'1':"Informational",'2':"Security warning",'3':"Security hole"}[self.vuln['severity']]            
             sevdict = {'Note':'0',
+                            'Security Hole4':'4',
                             'Security Hole':'3',
                             'Security Warning':'2',
                             'Security Note':'1',
                             'Info':'0'
                             }
+                            
             vuln['severity'] = sevdict[severity]
            
             # parse service, port and protocol
@@ -620,8 +625,6 @@ class DotNessusParser(Parser):
     # Thanks Alessandro!
     def loadFile( self, fname ):
         
-       severities = []
-
        # Automatic parse of .nessus file
        dom = parse(fname)
                         
@@ -772,35 +775,26 @@ class DotNessusParser(Parser):
                            
                        if details.nodeName == 'see_also':
                            vuln['see_also'] = details.childNodes[0].nodeValue
-                           
+
                        if details.nodeName == 'severity':
                            vuln['severity'] = details.childNodes[0].nodeValue
-                           
-                       # debug
-                       severities.append(vuln['severity'])
-                           
+
                        if details.nodeName == 'bid':
                            vuln['bid'] = details.childNodes[0].nodeValue
                            
                        if details.nodeName == 'other_references':
                            vuln['other_references'] = details.childNodes[0].nodeValue
+                        
+                       # 20140325 Roey Katz: Some plugins report Risk Rating of 0 yet mention "Critical: 1" in their output.  This is a corner case. 
+#                       try:
+#                           if vuln['plugin_output'].find("Critical: 1") > 0 or vuln['risk_factor']=="critical":
+#                               vuln['risk_factor'] = "critical"
+
+#                               print "FOUND CRITICAL on ip=%s, pluginid=%s, output=%s" % (item_info['ip'], vuln['pluginid'], vuln['plugin_output'])
+
+#                       except KeyError: # plugin_output and/or risk_factor might not be defined for the row we're processing
+#                           pass
                            
-                           
-                       # 20140325 Roey Katz: Sometimes "Critical" is reported in the plugin output but not in risk_factor.                   
-                       try:
-                           if vuln['plugin_output'].find("Critical: 1") > 0:
-                               vuln['risk_factor'] = "critical"
-
-#                               print "FOUND CRITICAL on %s" % (item_info['ip'])
-
-                       except KeyError: # plugin_output and/or risk_factor might not be defined for the row we're processing
-                           pass
-                           
-
-                           
-
-                                              
-
                    # create a new database record
                    newResult = Result()
                    
@@ -811,10 +805,9 @@ class DotNessusParser(Parser):
                    newResult.vuln = vuln  
            
                    # Store information extracted into a new row in the database
-
                    self.results.addResult(newResult)
                    
-#       print 'severities are %s' % set(severities)
+
     
 
 # for querying the results    
@@ -835,11 +828,12 @@ class ResultsBase:
 
     # narrow database results based on a condition function that returns True or False given a Result object
     def _commitMatch( self, cond ):
-
+        
         _results = []
         
         # long form: clear
         for r in self.results:
+
             if cond(r):
               _results.append(r)
               
@@ -867,20 +861,16 @@ class ResultsBase:
             if r.getSeverity() in severityList:
                 return True
             
-            # debug
-#            else:
-#                print 'severity "%s" not in permitted list!' % r.getSeverity()
-
             return False
         
         self._commitMatch( cond )
 
 
     def matchRiskFactors( self, riskFactorsList ):
-        # One-liner form
+        # One-liner form:
         # self._commitMatch( lambda r: r.getRiskFactor() in riskFactorsList ) # self.riskfactors )
 
-        # Longer form is easier to read
+        # But this longer form is easier to read
         def cond(r):
             if r.getRiskFactor() in riskFactorsList:
                 return True
@@ -934,6 +924,7 @@ class ResultsBase:
     def getOrderedQuery( self, selector, orderByPort=False, orderByHost=False ):
       queryDict = {}
       
+      
       for x in self.results:
           
         if not queryDict.has_key(selector(x)):  queryDict[selector(x)] = [x]  # cubbyhole the results
@@ -984,11 +975,11 @@ def parseArgs( argv ):
     parser.add_option("-p", "--portlist", type="string",  action="store", dest="portList",
               help="specify specific ports to show")
     parser.add_option("-r", "--riskfactors", type="string", action="store", dest="riskFactorsList", default="critical,high,moderate,medium,low,none",
-              help="specify list of allowable risk factors (default is 'critical,high,moderate,medium,low,none'")
+              help="specify list of allowable risk factors (default is any of critical,high,moderate,medium,low,none")
     parser.add_option("-t", "--hostlist", type="string",  action="store", dest="hostList",
               help="specify specific hosts to show")
-    parser.add_option("-s", "--severities", type="string", action="store", dest="severityList", default="hole,warn,note,info,openport",
-              help="specify specific list of severity codes to show (default is 'hole,warning'")
+    parser.add_option("-s", "--severities", type="string", action="store", dest="severityList", default="hole4,hole,warn,note,info,openport",
+              help="specify specific list of severity codes to show (default is any of hole4,hole,warn,note,info,openport")
     parser.add_option("-q", "--query", type="string", action="store", dest="contentQuery",
               help="show all results whose synopses match this regular expression")
     parser.add_option("-i", "--idlist", type="string", action="store", dest="pluginIDList",
@@ -1098,8 +1089,9 @@ if __name__=='__main__':
     if options.hostList:  options.hostList = parseHostList(options.hostList)
     
     if options.severityList:
-        
-      translateSeverities = {"hole":"3","warn":"2","note":"1","info":"0","openport":"0"}  # translate user input into numbers that Nessus now uses
+
+      # added "hole4" to account for the fact that some plugins have a "4" as their Severity.
+      translateSeverities = {"hole4":"4", "hole":"3","warn":"2","note":"1","info":"0","openport":"0"}  # translate user input into numbers that Nessus now uses
       
       try:
          options.severityList = [translateSeverities[i] for i in options.severityList.split(',')]
@@ -1149,6 +1141,7 @@ if __name__=='__main__':
 #        print 'size of database after matchSeverity() is %d' % query.size()
         
     if options.riskFactorsList:
+#        print "matching riskFactors"
 
         rfList = [i.lower() for i in options.riskFactorsList]
         query.matchRiskFactors( rfList )
