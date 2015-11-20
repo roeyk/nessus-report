@@ -58,6 +58,12 @@
 USAGE = 'Flexible Nessusreport re-formatter.  Usage:  %prog [options] files'
 
 import sys, re
+
+# 20151120 - Fix encoding issue for nessus output files
+# see http://stackoverflow.com/questions/21129020/how-to-fix-unicodedecodeerror-ascii-codec-cant-decode-byte
+reload(sys)
+sys.setdefaultencoding('utf8'
+
 from optparse import OptionParser
 from fnmatch import fnmatch
 import string
